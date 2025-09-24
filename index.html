@@ -1,0 +1,78 @@
+<!doctype html>
+return;
+}
+if (!declareCount) throw new Error('請於第4題選擇人數');
+
+
+// 若目前表單有填內容，嘗試收下
+const cur = getStudentFromForm();
+const hasAny = cur.name || cur.id || cur.gender || cur.category;
+if (hasAny) {
+try { validateStudent(cur); saved.push(cur); } catch(_) { /* 未完整就不收 */ }
+}
+
+
+if (saved.length < declareCount) {
+const ok = confirm(`您填答的特定人員人數少於 ${declareCount} 人（目前 ${saved.length} 人），確定結束嗎？`);
+if (!ok) return; // 繼續填寫
+}
+
+
+if (saved.length === 0) throw new Error('尚未填入任何學生資料');
+
+
+// 準備 payload
+const payload = {
+reporterName: base.reporterName,
+reporterEmail: base.reporterEmail,
+className: base.className,
+declareCount,
+students: saved
+};
+
+
+statusEl.textContent = '傳送中…';
+
+
+const res = await fetch(APPS_SCRIPT_URL, {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify(payload)
+});
+
+
+const text = await res.text();
+let json; try { json = JSON.parse(text); } catch { json = { ok: res.ok, raw: text }; }
+if (!res.ok || json.ok === false) throw new Error(json.message || '寫入失敗，請稍後再試');
+
+
+statusEl.textContent = '✅ 已將您填報的資料輸入特定人員建議名冊。感謝您的協助！';
+// 可選：重置
+// document.getElementById('btnReset').click();
+} catch (err) {
+statusEl.textContent = '❌ ' + (err.message || err);
+}
+});
+
+
+// 重新填寫（顯示於無特定人員時）
+el('btnReset').addEventListener('click', () => {
+document.querySelector('#app').scrollIntoView({behavior: 'smooth'});
+// 清空所有狀態
+['reporterName','reporterEmail','className'].forEach(id => el(id).value = '');
+el('hasSpecial').value = '';
+el('declareCount').value = '';
+clearStudentForm();
+declareCount = 0; saved = []; index = 1; updateProgress();
+secCount.classList.add('hidden');
+secStudent.classList.add('hidden');
+secNone.classList.add('hidden');
+statusEl.textContent = '';
+});
+
+
+// 初始
+updateProgress();
+</script>
+</body>
+</html>
